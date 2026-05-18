@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+.ipynb_checkpoints/
+.ipynb
+.env
+.git
+.gitignore
+README_docker.md
