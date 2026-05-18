@@ -7,5 +7,6 @@ httpx
 numpy
 joblib
 huggingface_hub
-black
-autoflake
+scikit-learn
+black==26.3.1
+autoflake==2.3.3

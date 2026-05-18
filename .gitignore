@@ -3,3 +3,10 @@
 .env
 *.pkl
 aula_02_e03_mlops_dados_sinteticos/notebook/HF_login.ipynb
+
+# arquivos sensiveis e gerados
+.env
+*.pkl
+__pycache__/
+.ipynb_checkpoints/
+aula_02_e03_mlops_dados_sinteticos/notebook/HF_login.ipynb

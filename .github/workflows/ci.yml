@@ -1,4 +1,4 @@
-name: CI — Bella Tavola
+name: CI - Bella Tavola
 
 on:
   push:
@@ -24,33 +24,39 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r aula_01_e02_fastapi/requirements.txt
 
-      - name: Diagnóstico do ambiente
+      - name: Diagnostico do ambiente
         run: |
-          echo "=== Python ==="
+          echo "Python"
           python --version
 
-          echo "=== Dependências instaladas ==="
+          echo "Dependencias instaladas"
           pip list
 
-          echo "=== Arquivos do projeto ==="
-          test -f aula_01_e02_fastapi/main.py          && echo "✅ main.py"          || echo "❌ main.py ausente"
-          test -f aula_01_e02_fastapi/requirements.txt && echo "✅ requirements.txt" || echo "❌ requirements.txt ausente"
-          test -d aula_01_e02_fastapi/tests            && echo "✅ tests/"           || echo "❌ tests/ ausente"
+          echo "Arquivos do projeto"
+          test -f aula_01_e02_fastapi/main.py && echo "main.py presente" || echo "main.py ausente"
+          test -f aula_01_e02_fastapi/requirements.txt && echo "requirements.txt presente" || echo "requirements.txt ausente"
+          test -d aula_01_e02_fastapi/tests && echo "tests presente" || echo "tests ausente"
 
-      - name: Verificar formatação
+      - name: Diagnostico do Black e do conftest
         run: |
           cd aula_01_e02_fastapi
-          black --check .
+          python -m black --version
+          python -c "from pathlib import Path; p = Path('tests/conftest.py'); print('Arquivo:', p); print('Existe:', p.exists()); print('Tamanho em bytes:', len(p.read_bytes())); print('Conteudo repr:'); print(repr(p.read_text()))"
 
-      - name: Verificar imports não utilizados
+      - name: Verificar formatacao
         run: |
           cd aula_01_e02_fastapi
-          autoflake --check --remove-all-unused-imports -r .
+          python -m black --check .
+
+      - name: Verificar imports nao utilizados
+        run: |
+          cd aula_01_e02_fastapi
+          python -m autoflake --check --remove-all-unused-imports -r .
 
       - name: Rodar testes smoke
         run: |
           cd aula_01_e02_fastapi
-          pytest tests/ -m "smoke or validacao" -v --tb=short
+          python -m pytest tests/ -m "smoke or validacao" -v --tb=short
 
   integracao:
     runs-on: ubuntu-latest
@@ -77,32 +83,32 @@ jobs:
           path: ~/.cache/huggingface
           key: hf-model-v1-${{ hashFiles('aula_01_e02_fastapi/requirements.txt') }}
 
-      - name: Diagnóstico do ambiente
+      - name: Diagnostico do ambiente
         run: |
-          echo "=== Python ==="
+          echo "Python"
           python --version
 
-          echo "=== Arquivos do projeto ==="
-          test -f aula_01_e02_fastapi/model_utils.py && echo "✅ model_utils.py" || echo "❌ model_utils.py ausente"
+          echo "Arquivos do projeto"
+          test -f aula_01_e02_fastapi/model_utils.py && echo "model_utils.py presente" || echo "model_utils.py ausente"
 
-          echo "=== Autenticação ==="
+          echo "Autenticacao"
           if [ -n "$HF_TOKEN" ]; then
-            echo "✅ HF_TOKEN definido"
+            echo "HF_TOKEN definido"
           else
-            echo "❌ HF_TOKEN ausente"
+            echo "HF_TOKEN ausente"
           fi
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
-      - name: Verificar autenticação com Hugging Face
-        run: python -c "import os; assert os.environ.get('HF_TOKEN'), 'HF_TOKEN não configurado'"
+      - name: Verificar autenticacao com Hugging Face
+        run: python -c "import os; assert os.environ.get('HF_TOKEN'), 'HF_TOKEN nao configurado'"
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
-      - name: Rodar testes de integração
+      - name: Rodar testes de integracao
         run: |
           cd aula_01_e02_fastapi
-          pytest tests/test_modelo.py -m integracao -v --tb=short
+          python -m pytest tests/test_modelo.py -m integracao -v --tb=short
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_REPO_ID: anaclaragr05/mlops-fraud-v1
