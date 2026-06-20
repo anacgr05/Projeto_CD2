@@ -56,6 +56,6 @@ app.include_router(ml.router, prefix="/ml", tags=["ML"])
 async def root():
     return {
         "restaurante": "Bella Tavola",
-        "mensagem": "Bem-vindo à API do Bella Tavola",
+        "mensagem": "Bem-vindo à API do Bella Tavola Docker",
         "versao": settings.app_version,
     }

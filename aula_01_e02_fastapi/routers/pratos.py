@@ -1,123 +1,140 @@
+import os
+import time
 from datetime import datetime
 from typing import Optional
 
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from fastapi import APIRouter, HTTPException
-
-from models.prato import PratoInput, PratoOutput, DisponibilidadeInput
+from pydantic import BaseModel
 
 router = APIRouter()
 
-pratos = [
-    {
-        "id": 1,
-        "nome": "Pizza Portuguesa",
-        "categoria": "pizza",
-        "preco": 59.9,
-        "preco_promocional": None,
-        "descricao": "Pizza Clássica Portuguesa",
-        "disponivel": True,
-        "criado_em": "2024-01-01T00:00:00",
-    },
-    {
-        "id": 2,
-        "nome": "Nhoque ao Sugo",
-        "categoria": "massa",
-        "preco": 44.9,
-        "preco_promocional": None,
-        "descricao": "Massa ao sugo",
-        "disponivel": True,
-        "criado_em": "2024-01-01T00:00:00",
-    },
-    {
-        "id": 3,
-        "nome": "Pudim de Leite",
-        "categoria": "sobremesa",
-        "preco": 16.9,
-        "preco_promocional": None,
-        "descricao": "Sobremesa de pudim",
-        "disponivel": True,
-        "criado_em": "2024-01-01T00:00:00",
-    },
-]
+# Mantém compatibilidade com routers/pedidos.py,
+# que importa "pratos" deste arquivo.
+pratos = []
+
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+
+class PratoInput(BaseModel):
+    nome: str
+    categoria: str
+    preco: float
+    preco_promocional: Optional[float] = None
+    descricao: Optional[str] = None
+    disponivel: bool = True
+
+
+def get_conn():
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL não configurada")
+
+    last_error = None
+    for _ in range(10):
+        try:
+            return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
+        except Exception as e:
+            last_error = e
+            time.sleep(1)
+
+    raise last_error
+
+
+def init_db():
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS pratos (
+            id SERIAL PRIMARY KEY,
+            nome TEXT NOT NULL,
+            categoria TEXT NOT NULL,
+            preco FLOAT NOT NULL,
+            preco_promocional FLOAT NULL,
+            descricao TEXT NULL,
+            disponivel BOOLEAN NOT NULL DEFAULT TRUE,
+            criado_em TIMESTAMP NOT NULL
+        );
+    """)
+
+    cur.execute("SELECT COUNT(*) AS total FROM pratos;")
+    total = cur.fetchone()["total"]
+
+    if total == 0:
+        cur.execute("""
+            INSERT INTO pratos
+            (nome, categoria, preco, preco_promocional, descricao, disponivel, criado_em)
+            VALUES
+            ('Pizza Portuguesa', 'pizza', 59.9, NULL, 'Pizza Clássica Portuguesa', TRUE, '2024-01-01T00:00:00'),
+            ('Nhoque ao Sugo', 'massa', 44.9, NULL, 'Massa ao sugo', TRUE, '2024-01-01T00:00:00'),
+            ('Pudim de Leite', 'sobremesa', 16.9, NULL, 'Sobremesa de pudim', TRUE, '2024-01-01T00:00:00');
+        """)
+
+    conn.commit()
+    cur.close()
+    conn.close()
 
 
 @router.get("/")
-async def listar_pratos(
-    categoria: Optional[str] = None,
-    preco_maximo: Optional[float] = None,
-    apenas_disponiveis: bool = False,
-):
-    resultado = pratos
+def listar_pratos():
+    init_db()
 
-    if categoria:
-        resultado = [p for p in resultado if p["categoria"] == categoria]
-
-    if preco_maximo is not None:
-        resultado = [p for p in resultado if p["preco"] <= preco_maximo]
-
-    if apenas_disponiveis:
-        resultado = [p for p in resultado if p["disponivel"]]
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM pratos ORDER BY id;")
+    resultado = cur.fetchall()
+    cur.close()
+    conn.close()
 
     return resultado
 
 
-@router.get("/{prato_id}")
-async def buscar_prato(prato_id: int, formato: str = "completo"):
-    for prato in pratos:
-        if prato["id"] == prato_id:
-            if formato == "resumido":
-                return {
-                    "nome": prato["nome"],
-                    "preco": prato["preco"],
-                    "preco_promocional": prato["preco_promocional"],
-                }
-            return prato
+@router.post("/")
+def criar_prato(prato: PratoInput):
+    init_db()
 
-    raise HTTPException(
-        status_code=404, detail=f"Prato com id {prato_id} não encontrado"
+    conn = get_conn()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        INSERT INTO pratos
+        (nome, categoria, preco, preco_promocional, descricao, disponivel, criado_em)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        RETURNING *;
+        """,
+        (
+            prato.nome,
+            prato.categoria,
+            prato.preco,
+            prato.preco_promocional,
+            prato.descricao,
+            prato.disponivel,
+            datetime.now(),
+        ),
     )
 
+    novo_prato = cur.fetchone()
+    conn.commit()
+    cur.close()
+    conn.close()
 
-@router.post("/", response_model=PratoOutput)
-async def criar_prato(prato: PratoInput):
-    novo_id = max((p["id"] for p in pratos), default=0) + 1
-    novo_prato = {
-        "id": novo_id,
-        "criado_em": datetime.now().isoformat(),
-        **prato.model_dump(),
-    }
-    pratos.append(novo_prato)
     return novo_prato
 
 
-@router.put("/{prato_id}/disponibilidade")
-async def alterar_disponibilidade(prato_id: int, body: DisponibilidadeInput):
-    for prato in pratos:
-        if prato["id"] == prato_id:
-            prato["disponivel"] = body.disponivel
-            return prato
+@router.get("/{prato_id}")
+def buscar_prato(prato_id: int):
+    init_db()
 
-    raise HTTPException(status_code=404, detail="Prato não encontrado")
-
-
-@router.post("/{prato_id}/aplicar_desconto")
-async def aplicar_desconto(prato_id: int, percentual: float):
-    prato = next((p for p in pratos if p["id"] == prato_id), None)
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM pratos WHERE id = %s;", (prato_id,))
+    prato = cur.fetchone()
+    cur.close()
+    conn.close()
 
     if not prato:
         raise HTTPException(status_code=404, detail="Prato não encontrado")
 
-    if percentual <= 0 or percentual > 50:
-        raise HTTPException(
-            status_code=400, detail="Percentual de desconto deve estar entre 1% e 50%"
-        )
-
-    if not prato["disponivel"]:
-        raise HTTPException(
-            status_code=400,
-            detail="Não é possível aplicar desconto em prato indisponível",
-        )
-
-    prato["preco_promocional"] = round(prato["preco"] * (1 - percentual / 100), 2)
-
-    return {"mensagem": "Desconto aplicado com sucesso", "prato": prato}
+    return prato
