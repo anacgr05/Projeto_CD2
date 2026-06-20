@@ -64,8 +64,7 @@ def init_db():
     cur = conn.cursor()
 
     if IS_SQLITE:
-        cur.execute(
-            """
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS pratos (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nome TEXT NOT NULL,
@@ -76,11 +75,9 @@ def init_db():
                 disponivel INTEGER NOT NULL DEFAULT 1,
                 criado_em TEXT NOT NULL
             );
-            """
-        )
+            """)
     else:
-        cur.execute(
-            """
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS pratos (
                 id SERIAL PRIMARY KEY,
                 nome TEXT NOT NULL,
@@ -91,25 +88,26 @@ def init_db():
                 disponivel BOOLEAN NOT NULL DEFAULT TRUE,
                 criado_em TIMESTAMP NOT NULL
             );
-            """
-        )
+            """)
 
     cur.execute(_format_query("SELECT COUNT(*) AS total FROM pratos;"))
     total = cur.fetchone()[0] if IS_SQLITE else cur.fetchone()["total"]
 
     if total == 0:
         cur.execute(
-            _format_query(
-                """
+            _format_query("""
                 INSERT INTO pratos
                 (nome, categoria, preco, preco_promocional, descricao, disponivel, criado_em)
                 VALUES
                 ('Pizza Portuguesa', 'pizza', 59.9, NULL, 'Pizza Clássica Portuguesa', %s, '2024-01-01T00:00:00'),
                 ('Nhoque ao Sugo', 'massa', 44.9, NULL, 'Massa ao sugo', %s, '2024-01-01T00:00:00'),
                 ('Pudim de Leite', 'sobremesa', 16.9, NULL, 'Sobremesa de pudim', %s, '2024-01-01T00:00:00');
-                """
+                """),
+            (
+                1 if IS_SQLITE else True,
+                1 if IS_SQLITE else True,
+                1 if IS_SQLITE else True,
             ),
-            (1 if IS_SQLITE else True, 1 if IS_SQLITE else True, 1 if IS_SQLITE else True),
         )
 
     conn.commit()
@@ -136,7 +134,7 @@ def listar_pratos(categoria: Optional[str] = None):
     cur.close()
     conn.close()
 
-    return [ _row_to_dict(row) for row in resultado ]
+    return [_row_to_dict(row) for row in resultado]
 
 
 @router.post("/")
@@ -146,13 +144,11 @@ def criar_prato(prato: PratoInput):
     conn = get_conn()
     cur = conn.cursor()
 
-    insert_query = _format_query(
-        """
+    insert_query = _format_query("""
         INSERT INTO pratos
         (nome, categoria, preco, preco_promocional, descricao, disponivel, criado_em)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """
-    )
+        """)
 
     insert_values = (
         prato.nome,
