@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     debug: bool = False
     max_mesas: int = 20
     max_pessoas_por_mesa: int = 10
+    database_url: str = "sqlite:///./bella_tavola.db"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

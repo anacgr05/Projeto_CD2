@@ -37,3 +37,4 @@ A documentação consolidada para a aula e04 está em `docs/e04_notes.md`.
 1. Leia o notebook da aula em `notebooks/...` para entender o fluxo e os passos.
 2. Verifique os arquivos de código na pasta correspondente à aula.
 3. Siga as instruções do README específico de cada módulo.
+3. Siga as instruções do README específico de cada módulo.
