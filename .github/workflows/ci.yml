@@ -24,31 +24,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r aula_01_e02_fastapi/requirements.txt
 
-      - name: Diagnostico do ambiente
-        run: |
-          echo "Python"
-          python --version
-
-          echo "Dependencias instaladas"
-          pip list
-
-          echo "Arquivos do projeto"
-          test -f aula_01_e02_fastapi/main.py && echo "main.py presente" || echo "main.py ausente"
-          test -f aula_01_e02_fastapi/requirements.txt && echo "requirements.txt presente" || echo "requirements.txt ausente"
-          test -d aula_01_e02_fastapi/tests && echo "tests presente" || echo "tests ausente"
-
-      - name: Diagnostico do Black e do conftest
-        run: |
-          cd aula_01_e02_fastapi
-          python -m black --version
-          python -c "from pathlib import Path; p = Path('tests/conftest.py'); print('Arquivo:', p); print('Existe:', p.exists()); print('Tamanho em bytes:', len(p.read_bytes())); print('Conteudo repr:'); print(repr(p.read_text()))"
-
-      - name: Verificar formatacao
+      - name: Verificar formatação
         run: |
           cd aula_01_e02_fastapi
           python -m black --check .
 
-      - name: Verificar imports nao utilizados
+      - name: Verificar imports não utilizados
         run: |
           cd aula_01_e02_fastapi
           python -m autoflake --check --remove-all-unused-imports -r .
@@ -83,32 +64,62 @@ jobs:
           path: ~/.cache/huggingface
           key: hf-model-v1-${{ hashFiles('aula_01_e02_fastapi/requirements.txt') }}
 
-      - name: Diagnostico do ambiente
-        run: |
-          echo "Python"
-          python --version
-
-          echo "Arquivos do projeto"
-          test -f aula_01_e02_fastapi/model_utils.py && echo "model_utils.py presente" || echo "model_utils.py ausente"
-
-          echo "Autenticacao"
-          if [ -n "$HF_TOKEN" ]; then
-            echo "HF_TOKEN definido"
-          else
-            echo "HF_TOKEN ausente"
-          fi
+      - name: Verificar autenticação com Hugging Face
+        run: python -c "import os; assert os.environ.get('HF_TOKEN'), 'HF_TOKEN não configurado'"
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
 
-      - name: Verificar autenticacao com Hugging Face
-        run: python -c "import os; assert os.environ.get('HF_TOKEN'), 'HF_TOKEN nao configurado'"
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-
-      - name: Rodar testes de integracao
+      - name: Rodar testes de integração
         run: |
           cd aula_01_e02_fastapi
           python -m pytest tests/test_modelo.py -m integracao -v --tb=short
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_REPO_ID: anaclaragr05/mlops-fraud-v1
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: integracao
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Autenticar no Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build e push da imagem
+        uses: docker/build-push-action@v5
+        with:
+          context: ./aula_01_e02_fastapi
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/bella-tavola:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/bella-tavola:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  relatorio:
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Resumo do pipeline
+        run: |
+          echo "================================================"
+          echo "  Pipeline CI do Bella Tavola concluído ✅"
+          echo "================================================"
+          echo "  Branch:  ${{ github.ref_name }}"
+          echo "  Commit:  ${{ github.sha }}"
+          echo "  Autor:   ${{ github.actor }}"
+          echo "  Imagem:  ${{ secrets.DOCKER_USERNAME }}/bella-tavola:${{ github.sha }}"
+          echo "  Latest:  ${{ secrets.DOCKER_USERNAME }}/bella-tavola:latest"
+          echo "================================================"
