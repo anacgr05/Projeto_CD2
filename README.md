@@ -37,27 +37,3 @@ A documentação consolidada para a aula e04 está em `docs/e04_notes.md`.
 1. Leia o notebook da aula em `notebooks/...` para entender o fluxo e os passos.
 2. Verifique os arquivos de código na pasta correspondente à aula.
 3. Siga as instruções do README específico de cada módulo.
-
-## Resumo das aulas
-
-### Aula 1 / e02 — FastAPI
-- Construção de uma API para o restaurante **Bella Tavola**.
-- Rotas para pratos, bebidas, pedidos e reservas.
-- Validação com `Pydantic`.
-- Organização modular com `routers/` e `models/`.
-- Dockerização disponível em `fastapi_api/README_docker.md`.
-
-### Aula 2 / e03 — MLOps e dados sintéticos
-- Geração de dados sintéticos de fraude.
-- Treinamento e serialização de modelo.
-- Exposição de predição via API.
-- Arquivos principais: `train.py`, `main.py`, `model_utils.py`, `data_utils.py`.
-
-### Aula 3 / e04 — GitHub Actions e CI
-- Materiais para workflow de integração contínua.
-- Testes automatizados com `pytest`.
-- Notebooks e anotações para os exercícios de CI.
-
-## Nota
-
-Os notebooks organizam o passo a passo e as respostas. Use-os como guia principal antes de executar os códigos do projeto.

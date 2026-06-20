@@ -22,21 +22,21 @@ jobs:
       - name: Instalar dependências
         run: |
           python -m pip install --upgrade pip
-          pip install -r aula_01_e02_fastapi/requirements.txt
+          pip install -r fastapi_api/requirements.txt
 
       - name: Verificar formatação
         run: |
-          cd aula_01_e02_fastapi
+          cd fastapi_api
           python -m black --check .
 
       - name: Verificar imports não utilizados
         run: |
-          cd aula_01_e02_fastapi
+          cd fastapi_api
           python -m autoflake --check --remove-all-unused-imports -r .
 
       - name: Rodar testes smoke
         run: |
-          cd aula_01_e02_fastapi
+          cd fastapi_api
           python -m pytest tests/ -m "smoke or validacao" -v --tb=short
 
   integracao:
@@ -56,13 +56,13 @@ jobs:
       - name: Instalar dependências
         run: |
           python -m pip install --upgrade pip
-          pip install -r aula_01_e02_fastapi/requirements.txt
+          pip install -r fastapi_api/requirements.txt
 
       - name: Cache do modelo Hugging Face
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
-          key: hf-model-v1-${{ hashFiles('aula_01_e02_fastapi/requirements.txt') }}
+          key: hf-model-v1-${{ hashFiles('fastapi_api/requirements.txt') }}
 
       - name: Verificar autenticação com Hugging Face
         run: python -c "import os; assert os.environ.get('HF_TOKEN'), 'HF_TOKEN não configurado'"
@@ -71,7 +71,7 @@ jobs:
 
       - name: Rodar testes de integração
         run: |
-          cd aula_01_e02_fastapi
+          cd fastapi_api
           python -m pytest tests/test_modelo.py -m integracao -v --tb=short
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -98,7 +98,7 @@ jobs:
       - name: Build e push da imagem
         uses: docker/build-push-action@v5
         with:
-          context: ./aula_01_e02_fastapi
+          context: ./fastapi_api
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/bella-tavola:${{ github.sha }}
