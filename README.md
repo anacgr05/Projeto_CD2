@@ -1,4 +1,4 @@
-# Projeto 1 - Ciência de Dados 2
+# Projeto - Ciência de Dados 2
 
 Este repositório reúne as atividades práticas da disciplina em três módulos principais, com código e notebooks organizados para facilitar a navegação.
 
